@@ -1,6 +1,13 @@
+import React from 'react'
+import "../App.css"
 function LandingPage() {
     return ( 
-        <div>Landing page</div>
+        <div className='landingPageContainer'>
+  <nav>
+    <div className='navHeader'></div>
+    <div className='navlist'></div>
+    </nav>
+        </div>
      );
 }
 
