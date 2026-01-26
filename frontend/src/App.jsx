@@ -1,13 +1,14 @@
-import {Route,BrowserRouter as Router,Routes} from "react-router-dom"
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 
-import './App.css';
+import "./App.css";
 import LandingPage from "./pages/landing";
-import Authentication from './pages/authentication';
+import Authentication from "./pages/authentication";
 import { AuthProvider } from "./contexts/AuthContext";
 import VideoMeetComponent from "./pages/VideoMeet";
 
 function App() {
   return (
+
    <div className="App">
   <Router>
     <AuthProvider>
@@ -21,7 +22,8 @@ function App() {
     </Router>
    </div>
     
-    
+  
+
   );
 }
 
