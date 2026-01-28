@@ -1,9 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
-import "../styles/videoComponent.css";
-import { TextField, Button } from "@mui/material";
+import { TextField, Button, IconButton, Badge } from "@mui/material";
+
+import VideocamIcon from "@mui/icons-material/Videocam";
+import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import ScreenShareIcon from "@mui/icons-material/ScreenShare";
+import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
+
+
+import MicOffIcon from "@mui/icons-material/MicOff";
+import CallEndIcon from "@mui/icons-material/CallEnd";
+import MicIcon from "@mui/icons-material/Mic";
+import ChatIcon from "@mui/icons-material/Chat";
+
+
 import { Navigate } from "react-router-dom";
 import { io } from "socket.io-client";
-
+import styles from "../styles/videoComponent.module.css";
 const server_url = "http://localhost:8080";
 
 var connections = {};
@@ -24,7 +36,7 @@ export default function VideoMeetComponent() {
   let [videoAvailable, setVideoAvailable] = useState(true);
   let [audioAvailable, setAudioAvailable] = useState(true);
 
-  let [video, setVideo] = useState();
+  let [video, setVideo] = useState([]);
   let [audio, setAudio] = useState();
 
   let [screen, setScreen] = useState();
@@ -329,6 +341,14 @@ export default function VideoMeetComponent() {
     getMedia();
   };
 
+  let handleVideo=()=>{
+    setVideo(!video);
+  }
+
+  let handleAudio=()=>{
+    setAudio(!audio);
+  }
+
   return (
     <div>
       {askForUsername === true ? (
@@ -351,11 +371,45 @@ export default function VideoMeetComponent() {
           </div>
         </div>
       ) : (
-        <>
-          <video ref={localVideoRef} autoPlay muted></video>
+        <div className={styles.meetVideoContainer}>
+
+          <div className={styles.buttonContainer}>
+            <IconButton onClick={handleVideo}>
+              {(video===true)? <VideocamIcon/>: <VideocamOffIcon/>}
+            </IconButton>
+
+            <IconButton style={{color:"red"}}>
+              <CallEndIcon/>
+            </IconButton>
+
+            <IconButton onClick={handleAudio}>
+              {audio===true? <MicIcon/>:<MicOffIcon/>}
+            </IconButton>
+
+            {screenAvailable===true ? 
+              <IconButton>
+              {screen === true?<ScreenShareIcon/>: <StopScreenShareIcon/>}
+            </IconButton>:<></> }
+
+            <Badge badgeContent={newMessages} max={999} color={"secondary"}>
+            <IconButton style={{color:"white"}}>
+              <ChatIcon />
+          </IconButton>
+            </Badge>
+
+
+
+
+          </div>
+          <video
+            className={styles.meetUserVideo}
+            ref={localVideoRef}
+            autoPlay
+            muted
+          ></video>
           {videos.map((video) => {
             return (
-              <div key={video.socketId}>
+              <div className={styles.conferenceView} key={video.socketId}>
                 <h2> {video.socketId} </h2>
                 <video
                   data-socket={video.socketId}
@@ -369,7 +423,7 @@ export default function VideoMeetComponent() {
               </div>
             );
           })}
-        </>
+        </div>
       )}
     </div>
   );
