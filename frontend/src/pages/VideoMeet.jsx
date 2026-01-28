@@ -24,7 +24,7 @@ export default function VideoMeetComponent() {
   let [videoAvailable, setVideoAvailable] = useState(true);
   let [audioAvailable, setAudioAvailable] = useState(true);
 
-  let [video, setVideo] = useState([]);
+  let [video, setVideo] = useState();
   let [audio, setAudio] = useState();
 
   let [screen, setScreen] = useState();
@@ -105,16 +105,13 @@ export default function VideoMeetComponent() {
       if (id === socketIdRef.current) continue;
       connections[id].addStream(window.localStream);
       connections[id].createOffer().then((description) => {
-        connections[id]
-          .setLocalDescription(description)
-          .then(() => {
-            socketIdRef.current.emit(
-              "signal",
-              id,
-              JSON.stringify({ sdp: connections[id].localDescription }),
-            );
-          })
-          .catch((e) => console.log(e));
+        connections[id].setLocalDescription(description).then(() => {
+          socketRef.current.emit(
+            "signal",
+            id,
+            JSON.stringify({ sdp: connections[id].localDescription }),
+          );
+        });
       });
     }
     stream.getTracks().forEach(
@@ -242,7 +239,7 @@ export default function VideoMeetComponent() {
       socketRef.current.on("chat-message", addMessage);
 
       socketRef.current.on("user-left", (id) => {
-        setVideo((video) => videos.filter((video) => video.socketId != id));
+        setVideos((videos) => videos.filter((video) => video.socketId != id));
       });
 
       socketRef.current.on("user-joined", (id, clients) => {
@@ -264,7 +261,7 @@ export default function VideoMeetComponent() {
               (video) => video.socketId === socketListId,
             );
             if (videoExists) {
-              setVideo((video) => {
+              setVideos((videos) => {
                 const updatedVideos = videos.map((video) =>
                   video.socketId === socketListId
                     ? { ...video, stream: event.stream }
@@ -280,7 +277,7 @@ export default function VideoMeetComponent() {
                 autoPlay: true,
                 playsinline: true,
               };
-              setVideos((video) => {
+              setVideos((videos) => {
                 const updatedVideos = [...videos, newVideo];
                 videoRef.current = updatedVideos;
                 return updatedVideos;
@@ -307,13 +304,11 @@ export default function VideoMeetComponent() {
             } catch (e) {}
             connections[id2].createOffer().then((description) => {
               connections[id2].setLocalDescription(description).then(() => {
-                socketRef.current
-                  .emit(
-                    "signal",
-                    id2,
-                    JSON.stringify({ sdp: connections[id2].localDescription }),
-                  )
-                  .catch((e) => console.log(e));
+                socketRef.current.emit(
+                  "signal",
+                  id2,
+                  JSON.stringify({ sdp: connections[id2].localDescription }),
+                );
               });
             });
           }
@@ -359,7 +354,20 @@ export default function VideoMeetComponent() {
         <>
           <video ref={localVideoRef} autoPlay muted></video>
           {videos.map((video) => {
-            <div key={video.socketId}></div>;
+            return (
+              <div key={video.socketId}>
+                <h2> {video.socketId} </h2>
+                <video
+                  data-socket={video.socketId}
+                  ref={(ref) => {
+                    if (ref && video.stream) {
+                      ref.srcObject = video.stream;
+                    }
+                  }}
+                  autoPlay
+                ></video>
+              </div>
+            );
           })}
         </>
       )}
