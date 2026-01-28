@@ -11,7 +11,7 @@ const app = express();
 const server = createServer(app);
 const io = connectToSocket(server);
 const mongo_url = process.env.MONGO_URL;
-app.set("port", process.env.PORT || 8000);
+app.set("port", process.env.PORT || 8080);
 
 app.use(cors());
 app.use(express.json({ limit: "40kb" }));

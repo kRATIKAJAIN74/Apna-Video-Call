@@ -56,26 +56,29 @@ export default function Authentication() {
 
   return (
     <ThemeProvider theme={defaultTheme}>
-      <Grid container component="main" sx={{ height: "100vh" }}>
+      <Grid container component="main" sx={{ height: "100vh" }} direction="row">
         <CssBaseline />
         <Grid
           item
-          xs={false}
-          sm={4}
-          md={7}
           sx={{
-            backgroundImage:
-              "url(https://source.unsplash.com/random?wallpapers)",
+            width: { xs: "0%", md: "60%" },
+            minHeight: "100vh",
+            backgroundImage: "url(https://picsum.photos/1600/900?random=1)",
             backgroundRepeat: "no-repeat",
-            backgroundColor: (t) =>
-              t.palette.mode === "light"
-                ? t.palette.grey[50]
-                : t.palette.grey[900],
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
         />
-        <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
+
+        <Grid
+          item
+          component={Paper}
+          elevation={6}
+          square
+          sx={{
+            width: { xs: "100%", md: "40%" },
+          }}
+        >
           <Box
             sx={{
               my: 8,

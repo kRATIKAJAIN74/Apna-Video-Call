@@ -6,13 +6,13 @@ let messages = {};
 let timeOnline = {};
 
 export const connectToSocket = (server) => {
-  const io = new Server(server,{
-    cors:{
-        origin:"*",
-        methods:["GET","POST"],
-        allowedHeaders:["*"],
-        credentials:true
-    }
+  const io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+      allowedHeaders: ["*"],
+      credentials: true,
+    },
   });
 
   io.on("connection", (socket) => {
@@ -24,11 +24,11 @@ export const connectToSocket = (server) => {
       connections[path].push(socket.id);
       timeOnline[socket.id] = new Date();
 
-      for (let a = 0; a < connection[path].length; i++) {
+      for (let a = 0; a < connections[path].length; a++) {
         io.to(connections[path][a]).emit(
           "user-joined",
           socket.id,
-          connections[path]
+          connections[path],
         );
       }
 
@@ -38,7 +38,7 @@ export const connectToSocket = (server) => {
             "chat-message",
             messages[path][a]["data"],
             message[path][a]["sender"],
-            message[path][a]["socket-id-sender"]
+            message[path][a]["socket-id-sender"],
           );
         }
       }
@@ -56,7 +56,7 @@ export const connectToSocket = (server) => {
           }
           return [room, isFound];
         },
-        ["", false]
+        ["", false],
       );
       if (found === true) {
         if (messages[matchingRoom] === undefined) {
@@ -74,23 +74,25 @@ export const connectToSocket = (server) => {
       }
     });
     socket.on("disconnect", () => {
-        var diffTime = Math.abs(timeOnline[socket.id]- new Date());
-        var KeyboardEvent
-        for(const [k,v] of JSON.parse(JSON.stringify(Object.entries(connections)))){
-            for(let a =0;a<v.length;++a){
-                if(v[a]===socket.id){
-                    key=k;
-                    for(let a =0;a<connections[key].length;++a){
-                        io.to(connections[key][a]).emit('user-left',socket.id);
-                    }
-                    var index = connections[key].indexOf(socket.id);
-                    connections[key].splice(index,1);
-                    if(connections[key].length===0){
-                        delete connections[key];
-                    }
-                }
+      var diffTime = Math.abs(timeOnline[socket.id] - new Date());
+      var KeyboardEvent;
+      for (const [k, v] of JSON.parse(
+        JSON.stringify(Object.entries(connections)),
+      )) {
+        for (let a = 0; a < v.length; ++a) {
+          if (v[a] === socket.id) {
+            let key = k;
+            for (let a = 0; a < connections[key].length; ++a) {
+              io.to(connections[key][a]).emit("user-left", socket.id);
             }
+            var index = connections[key].indexOf(socket.id);
+            connections[key].splice(index, 1);
+            if (connections[key].length === 0) {
+              delete connections[key];
+            }
+          }
         }
+      }
     });
   });
 
