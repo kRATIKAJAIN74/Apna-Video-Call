@@ -453,7 +453,7 @@ export default function VideoMeetComponent() {
         </div>
       ) : (
         <div className={styles.meetVideoContainer}>
-<<<<<<< HEAD
+
           <video className="meetUserVideo" ref={localVideoRef} autoPlay muted></video>
           {videos.map((video) => {
             return (
@@ -471,7 +471,7 @@ export default function VideoMeetComponent() {
               </div>
             );
           })}
-=======
+
           {showModal ? (
             <div className={styles.chatRoom}>
               <div className={styles.chatContainer}>
@@ -566,7 +566,7 @@ export default function VideoMeetComponent() {
               );
             })}
           </div>
->>>>>>> 7680c543559fb69ffc8e0ae9463cb2ce11aa3ae2
+
         </div>
       )}
     </div>
