@@ -3,7 +3,7 @@ import "../styles/videoComponent.css";
 import { TextField, Button } from "@mui/material";
 import { Navigate } from "react-router-dom";
 import { io } from "socket.io-client";
-
+import styles from "../styles/videoComponent.module.css";
 const server_url = "http://localhost:8080";
 
 var connections = {};
@@ -351,8 +351,8 @@ export default function VideoMeetComponent() {
           </div>
         </div>
       ) : (
-        <>
-          <video ref={localVideoRef} autoPlay muted></video>
+        <div className={styles.meetVideoContainer}>
+          <video className="meetUserVideo" ref={localVideoRef} autoPlay muted></video>
           {videos.map((video) => {
             return (
               <div key={video.socketId}>
@@ -369,7 +369,7 @@ export default function VideoMeetComponent() {
               </div>
             );
           })}
-        </>
+        </div>
       )}
     </div>
   );
