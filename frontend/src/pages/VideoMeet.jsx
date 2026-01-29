@@ -11,7 +11,7 @@ import CallEndIcon from "@mui/icons-material/CallEnd";
 import MicIcon from "@mui/icons-material/Mic";
 import ChatIcon from "@mui/icons-material/Chat";
 
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 const server_url = "http://localhost:8080";
@@ -342,6 +342,8 @@ export default function VideoMeetComponent() {
     connectToSocketServer();
   };
 
+  let routeTo = useNavigate();
+
   let connect = () => {
     setAskForUsername(false);
     getMedia();
@@ -430,6 +432,15 @@ export default function VideoMeetComponent() {
     setMessage("");
   };
 
+  let handleEndCall = () => {
+    try{
+      let tracks = localVideoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop())
+    } catch(e){
+   routeTo("/home")
+    }
+  }
+
   return (
     <div>
       {askForUsername === true ? (
@@ -511,7 +522,7 @@ export default function VideoMeetComponent() {
               {video === true ? <VideocamIcon /> : <VideocamOffIcon />}
             </IconButton>
 
-            <IconButton style={{ color: "red" }}>
+            <IconButton onClick={handleEndCall} style={{ color: "red" }}>
               <CallEndIcon />
             </IconButton>
 
