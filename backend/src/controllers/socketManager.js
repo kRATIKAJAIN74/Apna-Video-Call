@@ -33,12 +33,12 @@ export const connectToSocket = (server) => {
       }
 
       if (messages[path] !== undefined) {
-        for (let a = 0; a < connections[path].length; i++) {
+        for (let a = 0; a < messages[path].length; ++a) {
           io.to(socket.id).emit(
             "chat-message",
             messages[path][a]["data"],
-            message[path][a]["sender"],
-            message[path][a]["socket-id-sender"],
+            messages[path][a]["sender"],
+            messages[path][a]["socket-id-sender"],
           );
         }
       }
@@ -67,7 +67,7 @@ export const connectToSocket = (server) => {
           data: data,
           "socket-id-sender": socket.id,
         });
-        console.log("message", KeyboardEvent, ":", sender, data);
+        console.log("message", matchingRoom, ":", sender, data);
         connections[matchingRoom].forEach((elem) => {
           io.to(elem).emit("chat-message", data, sender, socket.id);
         });
