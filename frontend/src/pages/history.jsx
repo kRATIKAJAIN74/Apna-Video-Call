@@ -18,7 +18,10 @@ export default function History() {
     const fetchHistory = async () => {
       try {
         const history = await getHistoryOfUser();
-        setMeetings(Array.isArray(history) ? history : []);
+        const sortedHistory = Array.isArray(history) 
+          ? history.sort((a, b) => new Date(b.date) - new Date(a.date))
+          : [];
+        setMeetings(sortedHistory);
       } catch (err) {
         setMeetings([]);
       }
@@ -83,3 +86,4 @@ export default function History() {
 </div>
   );
 }
+
