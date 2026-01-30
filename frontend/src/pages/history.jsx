@@ -45,6 +45,17 @@ export default function History() {
 
     }
 
+    let formatTime = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-IN', { 
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    }
+
     return (
         <div>
 
@@ -68,6 +79,10 @@ export default function History() {
 
                                     <Typography sx={{ mb: 1.5 }} color="text.secondary">
                                         Date: {formatDate(e.date)}
+                                    </Typography>
+
+                                    <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                                        Time: {formatTime(e.date)}
                                     </Typography>
 
                                 </CardContent>
