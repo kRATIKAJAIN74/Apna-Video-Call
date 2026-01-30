@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import styles from "../styles/history.module.css";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
@@ -47,29 +47,39 @@ export default function History() {
   };
 
   return (
-    <div>
-      <IconButton onClick={() => routeTo("/home")}>
-        <HomeIcon />
-      </IconButton>
+   <div className={styles.historyPage}>
+  <div className={styles.header}>
+    <IconButton onClick={() => routeTo("/home")}>
+      <HomeIcon />
+    </IconButton>
+    <h2 className={styles.title}>Meeting History</h2>
+  </div>
 
-      {meetings.length > 0 &&
-        meetings.map((e, i) => (
-          <Card key={i} variant="outlined" sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography sx={{ fontSize: 14 }} color="text.secondary">
-                Code: {e.meetingCode}
+  {meetings.length > 0 ? (
+    <div className={styles.cardContainer}>
+      {meetings.map((e, i) => (
+        <Card key={i} variant="outlined" className={styles.card}>
+          <CardContent>
+            <Typography className={styles.code}>
+              Code: <span>{e.meetingCode}</span>
+            </Typography>
+
+            <div className={styles.meta}>
+              <Typography className={styles.metaText}>
+                📅 {formatDate(e.date)}
               </Typography>
 
-              <Typography sx={{ mb: 1 }} color="text.secondary">
-                Date: {formatDate(e.date)}
+              <Typography className={styles.metaText}>
+                ⏰ {formatTime(e.date)}
               </Typography>
-
-              <Typography sx={{ mb: 1 }} color="text.secondary">
-                Time: {formatTime(e.date)}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
+  ) : (
+    <p className={styles.empty}>No meeting history found</p>
+  )}
+</div>
   );
 }
