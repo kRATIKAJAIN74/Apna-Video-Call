@@ -15,6 +15,7 @@ import ChatIcon from "@mui/icons-material/Chat";
 import { Navigate, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
+import lobbyStyles from "../styles/lobby.module.css";
 const server_url = "http://localhost:8080";
 
 var connections = {};
@@ -114,7 +115,9 @@ export default function VideoMeetComponent() {
 
     for (let id in connections) {
       if (id === socketIdRef.current) continue;
-      connections[id].addStream(window.localStream);
+      window.localStream.getTracks().forEach((track) => {
+        connections[id].addTrack(track, window.localStream);
+      });
       connections[id].createOffer().then((description) => {
         connections[id].setLocalDescription(description).then(() => {
           socketRef.current.emit(
@@ -122,8 +125,8 @@ export default function VideoMeetComponent() {
             id,
             JSON.stringify({ sdp: connections[id].localDescription }),
           );
-        });
-      });
+        }).catch((e) => console.log(e));
+      }).catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -305,13 +308,17 @@ export default function VideoMeetComponent() {
           };
 
           if (window.localStream !== undefined && window.localStream !== null) {
-            connections[socketListId].addStream(window.localStream);
+            window.localStream.getTracks().forEach((track) => {
+              connections[socketListId].addTrack(track, window.localStream);
+            });
           } else {
             // let blackSilence
             let blackSilence = (...args) =>
               new MediaStream([black(...args), silence()]);
             window.localStream = blackSilence();
-            connections[socketListId].addStream(window.localStream);
+            window.localStream.getTracks().forEach((track) => {
+              connections[socketListId].addTrack(track, window.localStream);
+            });
           }
         });
 
@@ -319,7 +326,9 @@ export default function VideoMeetComponent() {
           for (let id2 in connections) {
             if (id2 === socketIdRef.current) continue;
             try {
-              connections[id2].addStream(window.localStream);
+              window.localStream.getTracks().forEach((track) => {
+                connections[id2].addTrack(track, window.localStream);
+              });
             } catch (e) {}
             connections[id2].createOffer().then((description) => {
               connections[id2].setLocalDescription(description).then(() => {
@@ -328,8 +337,8 @@ export default function VideoMeetComponent() {
                   id2,
                   JSON.stringify({ sdp: connections[id2].localDescription }),
                 );
-              });
-            });
+              }).catch((e) => console.log(e));
+            }).catch((e) => console.log(e));
           }
         }
       });
@@ -373,7 +382,9 @@ export default function VideoMeetComponent() {
       if (id === socketIdRef.current) {
         continue;
       }
-      connections[id].addStream(window.localStream);
+      window.localStream.getTracks().forEach((track) => {
+        connections[id].addTrack(track, window.localStream);
+      });
       connections[id].createOffer().then((description) => {
         connections[id]
           .setLocalDescription(description)
@@ -385,7 +396,7 @@ export default function VideoMeetComponent() {
             );
           })
           .catch((e) => console.log(e));
-      });
+      }).catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -446,22 +457,41 @@ export default function VideoMeetComponent() {
   return (
     <div>
       {askForUsername === true ? (
-        <div>
-          <h2>Enter into Lobby</h2>
-          <TextField
-            id="outlined-basic"
-            label="username"
-            variant="outlined"
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-            }}
-          />
-          <Button variant="contained" onClick={connect}>
-            Connect
-          </Button>
-          <div>
-            <video ref={localVideoRef} autoPlay muted></video>
+        <div className={lobbyStyles.lobbyContainer}>
+          <div className={lobbyStyles.lobbyBox}>
+            <div className={lobbyStyles.lobbyLeft}>
+              <h1 className={lobbyStyles.lobbyHeading}>Welcome to Video Call</h1>
+              <p className={lobbyStyles.lobbySubText}>
+                Enter your name and check your video preview before joining the meeting
+              </p>
+              
+              <div className={lobbyStyles.lobbyCard}>
+                <h3 className={lobbyStyles.cardTitle}>Enter Your Name</h3>
+                <input
+                  type="text"
+                  className={lobbyStyles.usernameInput}
+                  placeholder="Your name"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                  }}
+                />
+                <Button 
+                  variant="contained" 
+                  onClick={connect}
+                  className={lobbyStyles.connectBtn}
+                >
+                  Join Meeting
+                </Button>
+              </div>
+            </div>
+
+            <div className={lobbyStyles.lobbyRight}>
+              <div className={lobbyStyles.videoPreview}>
+                <video ref={localVideoRef} autoPlay muted></video>
+                <div className={lobbyStyles.videoPLabel}>Preview</div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
