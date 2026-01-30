@@ -24,9 +24,10 @@ export default function History() {
         const fetchHistory = async () => {
             try {
                 const history = await getHistoryOfUser();
-                setMeetings(history);
+                setMeetings(Array.isArray(history) ? history : []);
             } catch {
                 // IMPLEMENT SNACKBAR
+                setMeetings([]);
             }
         }
 
