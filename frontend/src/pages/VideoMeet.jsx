@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { TextField, Button, IconButton, Badge } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
@@ -433,14 +434,14 @@ export default function VideoMeetComponent() {
   };
 
   let handleEndCall = () => {
-    try{
+    try {
       let tracks = localVideoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop())
-      routeTo("/home")
-    } catch(e){
-   routeTo("/home")
+      tracks.forEach((track) => track.stop());
+      routeTo("/home");
+    } catch (e) {
+      routeTo("/home");
     }
-  }
+  };
 
   return (
     <div>
@@ -465,8 +466,12 @@ export default function VideoMeetComponent() {
         </div>
       ) : (
         <div className={styles.meetVideoContainer}>
-
-          <video className="meetUserVideo" ref={localVideoRef} autoPlay muted></video>
+          <video
+            className="meetUserVideo"
+            ref={localVideoRef}
+            autoPlay
+            muted
+          ></video>
           {videos.map((video) => {
             return (
               <div key={video.socketId}>
@@ -486,6 +491,16 @@ export default function VideoMeetComponent() {
 
           {showModal ? (
             <div className={styles.chatRoom}>
+              <div
+                
+                className={styles.crossButton}
+              >
+                <IconButton onClick={() => {
+                  setModal(!showModal);
+                }} aria-label="close">
+                  <CloseIcon />
+                </IconButton>
+              </div>
               <div className={styles.chatContainer}>
                 <div className={styles.chattingDisplay}>
                   {messages.map((item, index) => {
@@ -498,7 +513,7 @@ export default function VideoMeetComponent() {
                     );
                   })}
                 </div>
-                <h1>Chat room</h1>
+
                 <div className={styles.chattingArea}>
                   <TextField
                     id="outlined-basic"
@@ -578,7 +593,6 @@ export default function VideoMeetComponent() {
               );
             })}
           </div>
-
         </div>
       )}
     </div>
