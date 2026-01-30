@@ -437,7 +437,7 @@ export default function VideoMeetComponent() {
       let tracks = localVideoRef.current.srcObject.getTracks();
       tracks.forEach(track => track.stop())
     } catch(e){
-   routeTo("/home")
+   routeTo("/")
     }
   }
 

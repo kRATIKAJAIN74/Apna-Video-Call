@@ -2,14 +2,22 @@ import React from 'react'
 import "../App.css"
 import { Link, useNavigate } from 'react-router-dom'
 function LandingPage() {
+
+    const router = useNavigate();
     return ( 
         <div className='landingPageContainer'>
   <nav>
     <div className='navHeader'><h2>Apna Video Call</h2></div>
     <div className='navlist'>
-        <p>Join as Guest</p>
-        <p>Register</p>
-       <div role='button'><p>Login</p></div>
+        <p onClick={()=> {
+           router("/aljkn23ns");
+        }}>Join as Guest</p>
+        <p onClick={()=> {
+         router("/auth");
+       }}>Register</p>
+       <div  onClick={()=> {
+         router("/auth");
+       }} role='button'><p>Login</p></div>
     </div>
     </nav>
 

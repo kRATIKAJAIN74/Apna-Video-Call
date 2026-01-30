@@ -29,7 +29,12 @@ function HomeComponent() {
         {/* Right side */}
         <div className={styles.navRight}>
           <div className={styles.historyBtn}>
-            <IconButton size="small">
+            <IconButton  onClick={
+              ()=> {
+                navigate("/history")
+              }
+            } 
+            size="small">
               <RestoreIcon />
             </IconButton>
             <span>History</span>
