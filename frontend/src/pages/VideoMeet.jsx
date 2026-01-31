@@ -20,7 +20,6 @@ import lobbyStyles from "../styles/lobby.module.css";
 const server_url = process.env.REACT_APP_SOCKET_URL;
  // for prod
 
-var connections = {};
 const peerConfigConnections = {
   iceServers: [
     {
@@ -31,6 +30,7 @@ const peerConfigConnections = {
 
 export default function VideoMeetComponent() {
   const { meetingId } = useParams();
+  const connectionsRef = useRef({});
   var socketRef = useRef();
   let socketIdRef = useRef();
 
@@ -116,21 +116,21 @@ export default function VideoMeetComponent() {
       localVideoRef.current.srcObject = stream;
     }
 
-    for (let id in connections) {
+    for (let id in connectionsRef.current) {
       if (id === socketIdRef.current) continue;
       window.localStream.getTracks().forEach((track) => {
-        connections[id].addTrack(track, window.localStream);
+        connectionsRef.current[id].addTrack(track, window.localStream);
       });
-      connections[id]
+      connectionsRef.current[id]
         .createOffer()
         .then((description) => {
-          connections[id]
+          connectionsRef.current[id]
             .setLocalDescription(description)
             .then(() => {
               socketRef.current.emit(
                 "signal",
                 id,
-                JSON.stringify({ sdp: connections[id].localDescription }),
+                JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
               );
             })
             .catch((e) => console.log(e));
@@ -155,16 +155,18 @@ export default function VideoMeetComponent() {
           window.localStream = blackSilence();
           localVideoRef.current.srcObject = window.localStream;
 
-          for (let id in connections) {
-            connections[id].addStream(window.localStream);
-            connections[id].createOffer().then((description) => {
-              connections[id]
+          for (let id in connectionsRef.current) {
+            window.localStream.getTracks().forEach((track) => {
+              connectionsRef.current[id].addTrack(track, window.localStream);
+            });
+            connectionsRef.current[id].createOffer().then((description) => {
+              connectionsRef.current[id]
                 .setLocalDescription(description)
                 .then(() => {
                   socketRef.current.emit(
                     "signal",
                     id,
-                    JSON.stringify({ sdp: connections[id].localDescription }),
+                    JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
                   );
                 })
                 .catch((e) => console.log(e));
@@ -217,11 +219,11 @@ export default function VideoMeetComponent() {
     var signal = JSON.parse(message);
     if (fromId !== socketIdRef.current) {
       // Ensure connection exists for this peer
-      if (!connections[fromId]) {
-        connections[fromId] = new RTCPeerConnection(
+      if (!connectionsRef.current[fromId]) {
+        connectionsRef.current[fromId] = new RTCPeerConnection(
           peerConfigConnections,
         );
-        connections[fromId].onicecandidate = (event) => {
+        connectionsRef.current[fromId].onicecandidate = (event) => {
           if (event.candidate != null) {
             socketRef.current.emit(
               "signal",
@@ -230,7 +232,7 @@ export default function VideoMeetComponent() {
             );
           }
         };
-        connections[fromId].ontrack = (event) => {
+        connectionsRef.current[fromId].ontrack = (event) => {
           let videoExists = videoRef.current.find(
             (video) => video.socketId === fromId,
           );
@@ -262,27 +264,27 @@ export default function VideoMeetComponent() {
         // Add local tracks safely
         if (window.localStream !== undefined && window.localStream !== null) {
           window.localStream.getTracks().forEach((track) => {
-            connections[fromId].addTrack(track, window.localStream);
+            connectionsRef.current[fromId].addTrack(track, window.localStream);
           });
         }
       }
 
       if (signal.sdp) {
-        connections[fromId]
+        connectionsRef.current[fromId]
           .setRemoteDescription(new RTCSessionDescription(signal.sdp))
           .then(() => {
             if (signal.sdp.type === "offer") {
-              connections[fromId]
+              connectionsRef.current[fromId]
                 .createAnswer()
                 .then((description) => {
-                  connections[fromId]
+                  connectionsRef.current[fromId]
                     .setLocalDescription(description)
                     .then(() => {
                       socketRef.current.emit(
                         "signal",
                         fromId,
                         JSON.stringify({
-                          sdp: connections[fromId].localDescription,
+                          sdp: connectionsRef.current[fromId].localDescription,
                         }),
                       );
                     })
@@ -294,7 +296,7 @@ export default function VideoMeetComponent() {
           .catch((e) => console.log(e));
       }
       if (signal.ice) {
-        connections[fromId]
+        connectionsRef.current[fromId]
           .addIceCandidate(new RTCIceCandidate(signal.ice))
           .catch((e) => console.log(e));
       }
@@ -321,6 +323,8 @@ export default function VideoMeetComponent() {
     socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("chat-message", addMessage);
     socketRef.current.on("user-left", (id) => {
+      // Remove peer connection
+      delete connectionsRef.current[id];
       setVideos((videos) => videos.filter((video) => video.socketId != id));
     });
     socketRef.current.on("user-joined", handleUserJoined);
@@ -328,6 +332,8 @@ export default function VideoMeetComponent() {
     // Only emit join-call after creating socket
     socketRef.current.on("connect", () => {
       socketIdRef.current = socketRef.current.id;
+      // Clear previous messages on new connection
+      setMessages([]);
       socketRef.current.emit("join-call", meetingId);
     });
   };
@@ -335,11 +341,11 @@ export default function VideoMeetComponent() {
   let handleUserJoined = (id, clients) => {
     clients.forEach((socketListId) => {
       // Check if connection already exists
-      if (!connections[socketListId]) {
-        connections[socketListId] = new RTCPeerConnection(
+      if (!connectionsRef.current[socketListId]) {
+        connectionsRef.current[socketListId] = new RTCPeerConnection(
           peerConfigConnections,
         );
-        connections[socketListId].onicecandidate = (event) => {
+        connectionsRef.current[socketListId].onicecandidate = (event) => {
           if (event.candidate != null) {
             socketRef.current.emit(
               "signal",
@@ -348,7 +354,7 @@ export default function VideoMeetComponent() {
             );
           }
         };
-        connections[socketListId].ontrack = (event) => {
+        connectionsRef.current[socketListId].ontrack = (event) => {
           let videoExists = videoRef.current.find(
             (video) => video.socketId === socketListId,
           );
@@ -380,43 +386,45 @@ export default function VideoMeetComponent() {
         // Add local tracks safely
         if (window.localStream !== undefined && window.localStream !== null) {
           window.localStream.getTracks().forEach((track) => {
-            connections[socketListId].addTrack(track, window.localStream);
+            connectionsRef.current[socketListId].addTrack(track, window.localStream);
           });
         } else {
           let blackSilence = (...args) =>
             new MediaStream([black(...args), silence()]);
           window.localStream = blackSilence();
           window.localStream.getTracks().forEach((track) => {
-            connections[socketListId].addTrack(track, window.localStream);
+            connectionsRef.current[socketListId].addTrack(track, window.localStream);
           });
         }
       }
     });
 
-    // Send offer if this is the new user joining
+    // Only existing users create and send offers to newly joined users
+    // Newly joined users will answer those offers
     if (id === socketIdRef.current) {
-      for (let id2 in connections) {
+      // This is the new user joining, existing users should send offers
+      for (let id2 in connectionsRef.current) {
         if (id2 === socketIdRef.current) continue;
         try {
           if (window.localStream !== undefined && window.localStream !== null) {
             window.localStream.getTracks().forEach((track) => {
-              connections[id2].addTrack(track, window.localStream);
+              connectionsRef.current[id2].addTrack(track, window.localStream);
             });
           }
         } catch (e) {
           console.log(e);
         }
-        connections[id2]
+        connectionsRef.current[id2]
           .createOffer()
           .then((description) => {
-            connections[id2]
+            connectionsRef.current[id2]
               .setLocalDescription(description)
               .then(() => {
                 socketRef.current.emit(
                   "signal",
                   id2,
                   JSON.stringify({
-                    sdp: connections[id2].localDescription,
+                    sdp: connectionsRef.current[id2].localDescription,
                   }),
                 );
               })
@@ -460,23 +468,23 @@ export default function VideoMeetComponent() {
 
     localVideoRef.current.srcObject = stream;
 
-    for (let id in connections) {
+    for (let id in connectionsRef.current) {
       if (id === socketIdRef.current) {
         continue;
       }
       window.localStream.getTracks().forEach((track) => {
-        connections[id].addTrack(track, window.localStream);
+        connectionsRef.current[id].addTrack(track, window.localStream);
       });
-      connections[id]
+      connectionsRef.current[id]
         .createOffer()
         .then((description) => {
-          connections[id]
+          connectionsRef.current[id]
             .setLocalDescription(description)
             .then(() => {
               socketRef.current.emit(
                 "signal",
                 id,
-                JSON.stringify({ sdp: connections[id].localDescription }),
+                JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
               );
             })
             .catch((e) => console.log(e));
