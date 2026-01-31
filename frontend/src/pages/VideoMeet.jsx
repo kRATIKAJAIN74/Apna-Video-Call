@@ -214,6 +214,56 @@ export default function VideoMeetComponent() {
   let gotMessageFromServer = (fromId, message) => {
     var signal = JSON.parse(message);
     if (fromId !== socketIdRef.current) {
+      // Ensure connection exists for this peer
+      if (!connections[fromId]) {
+        connections[fromId] = new RTCPeerConnection(
+          peerConfigConnections,
+        );
+        connections[fromId].onicecandidate = (event) => {
+          if (event.candidate != null) {
+            socketRef.current.emit(
+              "signal",
+              fromId,
+              JSON.stringify({ ice: event.candidate }),
+            );
+          }
+        };
+        connections[fromId].ontrack = (event) => {
+          let videoExists = videoRef.current.find(
+            (video) => video.socketId === fromId,
+          );
+          if (videoExists) {
+            setVideos((videos) => {
+              const updatedVideos = videos.map((video) =>
+                video.socketId === fromId
+                  ? { ...video, stream: event.streams[0] }
+                  : video,
+              );
+              videoRef.current = updatedVideos;
+              return updatedVideos;
+            });
+          } else {
+            let newVideo = {
+              socketId: fromId,
+              stream: event.streams[0],
+              autoPlay: true,
+              playsinline: true,
+            };
+            setVideos((videos) => {
+              const updatedVideos = [...videos, newVideo];
+              videoRef.current = updatedVideos;
+              return updatedVideos;
+            });
+          }
+        };
+        
+        if (window.localStream !== undefined && window.localStream !== null) {
+          window.localStream.getTracks().forEach((track) => {
+            connections[fromId].addTrack(track, window.localStream);
+          });
+        }
+      }
+
       if (signal.sdp) {
         connections[fromId]
           .setRemoteDescription(new RTCSessionDescription(signal.sdp))
@@ -290,7 +340,7 @@ export default function VideoMeetComponent() {
               );
             }
           };
-          connections[socketListId].onaddstream = (event) => {
+          connections[socketListId].ontrack = (event) => {
             let videoExists = videoRef.current.find(
               (video) => video.socketId === socketListId,
             );
@@ -298,7 +348,7 @@ export default function VideoMeetComponent() {
               setVideos((videos) => {
                 const updatedVideos = videos.map((video) =>
                   video.socketId === socketListId
-                    ? { ...video, stream: event.stream }
+                    ? { ...video, stream: event.streams[0] }
                     : video,
                 );
                 videoRef.current = updatedVideos;
@@ -307,7 +357,7 @@ export default function VideoMeetComponent() {
             } else {
               let newVideo = {
                 socketId: socketListId,
-                stream: event.stream,
+                stream: event.streams[0],
                 autoPlay: true,
                 playsinline: true,
               };
