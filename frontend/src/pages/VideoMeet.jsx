@@ -119,15 +119,21 @@ export default function VideoMeetComponent() {
       window.localStream.getTracks().forEach((track) => {
         connections[id].addTrack(track, window.localStream);
       });
-      connections[id].createOffer().then((description) => {
-        connections[id].setLocalDescription(description).then(() => {
-          socketRef.current.emit(
-            "signal",
-            id,
-            JSON.stringify({ sdp: connections[id].localDescription }),
-          );
-        }).catch((e) => console.log(e));
-      }).catch((e) => console.log(e));
+      connections[id]
+        .createOffer()
+        .then((description) => {
+          connections[id]
+            .setLocalDescription(description)
+            .then(() => {
+              socketRef.current.emit(
+                "signal",
+                id,
+                JSON.stringify({ sdp: connections[id].localDescription }),
+              );
+            })
+            .catch((e) => console.log(e));
+        })
+        .catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -253,10 +259,13 @@ export default function VideoMeetComponent() {
   };
 
   let connectToSocketServer = () => {
-    socketRef.current = io.connect(server_url, { secure: false });
+    socketRef.current = io(server_url, {
+      transports: ["websocket"],
+    });
+
     socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("connect", () => {
-      socketRef.current.emit("join-call", window.location.href);
+      socketRef.current.emit("join-call", meetingCode);
 
       socketIdRef.current = socketRef.current.id;
       socketRef.current.on("chat-message", addMessage);
@@ -331,15 +340,23 @@ export default function VideoMeetComponent() {
                 connections[id2].addTrack(track, window.localStream);
               });
             } catch (e) {}
-            connections[id2].createOffer().then((description) => {
-              connections[id2].setLocalDescription(description).then(() => {
-                socketRef.current.emit(
-                  "signal",
-                  id2,
-                  JSON.stringify({ sdp: connections[id2].localDescription }),
-                );
-              }).catch((e) => console.log(e));
-            }).catch((e) => console.log(e));
+            connections[id2]
+              .createOffer()
+              .then((description) => {
+                connections[id2]
+                  .setLocalDescription(description)
+                  .then(() => {
+                    socketRef.current.emit(
+                      "signal",
+                      id2,
+                      JSON.stringify({
+                        sdp: connections[id2].localDescription,
+                      }),
+                    );
+                  })
+                  .catch((e) => console.log(e));
+              })
+              .catch((e) => console.log(e));
           }
         }
       });
@@ -386,18 +403,21 @@ export default function VideoMeetComponent() {
       window.localStream.getTracks().forEach((track) => {
         connections[id].addTrack(track, window.localStream);
       });
-      connections[id].createOffer().then((description) => {
-        connections[id]
-          .setLocalDescription(description)
-          .then(() => {
-            socketRef.current.emit(
-              "signal",
-              id,
-              JSON.stringify({ sdp: connections[id].localDescription }),
-            );
-          })
-          .catch((e) => console.log(e));
-      }).catch((e) => console.log(e));
+      connections[id]
+        .createOffer()
+        .then((description) => {
+          connections[id]
+            .setLocalDescription(description)
+            .then(() => {
+              socketRef.current.emit(
+                "signal",
+                id,
+                JSON.stringify({ sdp: connections[id].localDescription }),
+              );
+            })
+            .catch((e) => console.log(e));
+        })
+        .catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -461,11 +481,14 @@ export default function VideoMeetComponent() {
         <div className={lobbyStyles.lobbyContainer}>
           <div className={lobbyStyles.lobbyBox}>
             <div className={lobbyStyles.lobbyLeft}>
-              <h1 className={lobbyStyles.lobbyHeading}>Welcome to Video Call</h1>
+              <h1 className={lobbyStyles.lobbyHeading}>
+                Welcome to Video Call
+              </h1>
               <p className={lobbyStyles.lobbySubText}>
-                Enter your name and check your video preview before joining the meeting
+                Enter your name and check your video preview before joining the
+                meeting
               </p>
-              
+
               <div className={lobbyStyles.lobbyCard}>
                 <h3 className={lobbyStyles.cardTitle}>Enter Your Name</h3>
                 <input
@@ -477,8 +500,8 @@ export default function VideoMeetComponent() {
                     setUsername(e.target.value);
                   }}
                 />
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   onClick={connect}
                   className={lobbyStyles.connectBtn}
                 >
@@ -522,13 +545,13 @@ export default function VideoMeetComponent() {
 
           {showModal ? (
             <div className={styles.chatRoom}>
-              <div
-                
-                className={styles.crossButton}
-              >
-                <IconButton onClick={() => {
-                  setModal(!showModal);
-                }} aria-label="close">
+              <div className={styles.crossButton}>
+                <IconButton
+                  onClick={() => {
+                    setModal(!showModal);
+                  }}
+                  aria-label="close"
+                >
                   <CloseIcon />
                 </IconButton>
               </div>

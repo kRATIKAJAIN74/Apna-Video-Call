@@ -7,10 +7,10 @@ let timeOnline = {};
 
 export const connectToSocket = (server) => {
   const io = new Server(server, {
+    transports: ["websocket"],
     cors: {
-      origin: "*",
+      origin: "https://apna-video-call-frontend-8djz.onrender.com",
       methods: ["GET", "POST"],
-      allowedHeaders: ["*"],
       credentials: true,
     },
   });
