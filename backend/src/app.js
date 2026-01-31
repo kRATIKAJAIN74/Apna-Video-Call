@@ -13,11 +13,18 @@ const io = connectToSocket(server);
 const mongo_url = process.env.MONGO_URL;
 app.set("port", process.env.PORT || 8080);
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://apna-video-call-frontend-8djz.onrender.com",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
+
 app.use(express.json({ limit: "40kb" }));
 app.use(express.urlencoded({ limit: "40kb", extended: true }));
 
-app.use("/api/v1/users",userRoutes);
+app.use("/api/v1/users", userRoutes);
 
 const start = async () => {
   const connectionDb = await mongoose.connect(mongo_url);
