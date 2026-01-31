@@ -17,7 +17,8 @@ import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
 // const server_url = "http://localhost:8080"; // for local
-const server_url = process.env.REACT_APP_BASE_URL; // for prod
+const server_url = process.env.REACT_APP_SOCKET_URL;
+ // for prod
 
 var connections = {};
 const peerConfigConnections = {
