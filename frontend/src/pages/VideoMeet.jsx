@@ -314,12 +314,12 @@ export default function VideoMeetComponent() {
       transports: ["websocket"],
     });
 
-    socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("connect", () => {
       const roomId = window.location.pathname;
       socketRef.current.emit("join-call", roomId);
 
       socketIdRef.current = socketRef.current.id;
+      socketRef.current.on("signal", gotMessageFromServer);
       socketRef.current.on("chat-message", addMessage);
 
       socketRef.current.on("user-left", (id) => {
@@ -590,6 +590,7 @@ export default function VideoMeetComponent() {
                     }
                   }}
                   autoPlay
+                  playsinline
                 ></video>
               </div>
             );
