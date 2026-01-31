@@ -18,7 +18,7 @@ import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
 // const server_url = "http://localhost:8080"; // for local
 const server_url = process.env.REACT_APP_SOCKET_URL;
- // for prod
+// for prod
 
 const peerConfigConnections = {
   iceServers: [
@@ -58,6 +58,34 @@ export default function VideoMeetComponent() {
 
   const videoRef = useRef([]);
   let [videos, setVideos] = useState([]);
+
+  // Helper function to safely add track to peer connection, preventing duplicates
+  const addTrackSafely = (peerConnection, track, stream) => {
+    if (!peerConnection) return;
+
+    // Check if this track is already being sent
+    const senders = peerConnection.getSenders();
+    const senderExists = senders.some((sender) => sender.track === track);
+
+    if (!senderExists) {
+      try {
+        peerConnection.addTrack(track, stream);
+      } catch (e) {
+        console.log("Error adding track:", e);
+      }
+    }
+  };
+
+  // Reset connections, videos, and messages when meetingId changes
+  useEffect(() => {
+    // Clean up previous connections
+    Object.values(connectionsRef.current).forEach((pc) => {
+      pc.close();
+    });
+    connectionsRef.current = {};
+    setVideos([]);
+    setMessages([]);
+  }, [meetingId]);
 
   const getPermissions = async () => {
     try {
@@ -106,36 +134,26 @@ export default function VideoMeetComponent() {
   }, []);
 
   let getUserMediaSuccess = (stream) => {
-    try {
-      window.localStream.getTracks().forEach((track) => track.stop());
-    } catch (e) {
-      console.log(e);
+    // Stop old tracks before replacing stream
+    if (window.localStream && window.localStream.getTracks) {
+      try {
+        window.localStream.getTracks().forEach((track) => track.stop());
+      } catch (e) {
+        console.log("Error stopping old tracks:", e);
+      }
     }
+
     window.localStream = stream;
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
 
+    // Add tracks to existing peer connections
     for (let id in connectionsRef.current) {
       if (id === socketIdRef.current) continue;
       window.localStream.getTracks().forEach((track) => {
-        connectionsRef.current[id].addTrack(track, window.localStream);
+        addTrackSafely(connectionsRef.current[id], track, window.localStream);
       });
-      connectionsRef.current[id]
-        .createOffer()
-        .then((description) => {
-          connectionsRef.current[id]
-            .setLocalDescription(description)
-            .then(() => {
-              socketRef.current.emit(
-                "signal",
-                id,
-                JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
-              );
-            })
-            .catch((e) => console.log(e));
-        })
-        .catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -152,24 +170,27 @@ export default function VideoMeetComponent() {
           //Todo BlackSilence
           let blackSilence = (...args) =>
             new MediaStream([black(...args), silence()]);
+
+          // Stop old tracks before assigning blackSilence
+          if (window.localStream && window.localStream.getTracks) {
+            try {
+              window.localStream.getTracks().forEach((track) => track.stop());
+            } catch (e) {
+              console.log(e);
+            }
+          }
+
           window.localStream = blackSilence();
           localVideoRef.current.srcObject = window.localStream;
 
+          // Add silence/black tracks to existing connections
           for (let id in connectionsRef.current) {
             window.localStream.getTracks().forEach((track) => {
-              connectionsRef.current[id].addTrack(track, window.localStream);
-            });
-            connectionsRef.current[id].createOffer().then((description) => {
-              connectionsRef.current[id]
-                .setLocalDescription(description)
-                .then(() => {
-                  socketRef.current.emit(
-                    "signal",
-                    id,
-                    JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
-                  );
-                })
-                .catch((e) => console.log(e));
+              addTrackSafely(
+                connectionsRef.current[id],
+                track,
+                window.localStream,
+              );
             });
           }
         }),
@@ -260,20 +281,29 @@ export default function VideoMeetComponent() {
             });
           }
         };
-        
+
         // Add local tracks safely
         if (window.localStream !== undefined && window.localStream !== null) {
           window.localStream.getTracks().forEach((track) => {
-            connectionsRef.current[fromId].addTrack(track, window.localStream);
+            addTrackSafely(
+              connectionsRef.current[fromId],
+              track,
+              window.localStream,
+            );
           });
         }
       }
 
       if (signal.sdp) {
-        connectionsRef.current[fromId]
-          .setRemoteDescription(new RTCSessionDescription(signal.sdp))
-          .then(() => {
-            if (signal.sdp.type === "offer") {
+        const signalingState = connectionsRef.current[fromId].signalingState;
+
+        // Handle SDP based on type and current signaling state
+        if (signal.sdp.type === "offer") {
+          // Always accept offers
+          connectionsRef.current[fromId]
+            .setRemoteDescription(new RTCSessionDescription(signal.sdp))
+            .then(() => {
+              // Create answer to the offer
               connectionsRef.current[fromId]
                 .createAnswer()
                 .then((description) => {
@@ -288,12 +318,25 @@ export default function VideoMeetComponent() {
                         }),
                       );
                     })
-                    .catch((e) => console.log(e));
+                    .catch((e) =>
+                      console.log("Error setting local description:", e),
+                    );
                 })
-                .catch((e) => console.log(e));
-            }
-          })
-          .catch((e) => console.log(e));
+                .catch((e) => console.log("Error creating answer:", e));
+            })
+            .catch((e) => console.log("Error setting remote offer:", e));
+        } else if (signal.sdp.type === "answer") {
+          // Only set remote answer if we're in the right state
+          if (signalingState === "have-local-offer") {
+            connectionsRef.current[fromId]
+              .setRemoteDescription(new RTCSessionDescription(signal.sdp))
+              .catch((e) => console.log("Error setting remote answer:", e));
+          } else {
+            console.log(
+              `Ignoring answer when signalingState is ${signalingState}, expected "have-local-offer"`,
+            );
+          }
+        }
       }
       if (signal.ice) {
         connectionsRef.current[fromId]
@@ -323,7 +366,10 @@ export default function VideoMeetComponent() {
     socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("chat-message", addMessage);
     socketRef.current.on("user-left", (id) => {
-      // Remove peer connection
+      // Close peer connection before removing
+      if (connectionsRef.current[id]) {
+        connectionsRef.current[id].close();
+      }
       delete connectionsRef.current[id];
       setVideos((videos) => videos.filter((video) => video.socketId != id));
     });
@@ -340,7 +386,7 @@ export default function VideoMeetComponent() {
 
   let handleUserJoined = (id, clients) => {
     clients.forEach((socketListId) => {
-      // Check if connection already exists
+      // Check if connection already exists - prevent duplicates
       if (!connectionsRef.current[socketListId]) {
         connectionsRef.current[socketListId] = new RTCPeerConnection(
           peerConfigConnections,
@@ -386,52 +432,46 @@ export default function VideoMeetComponent() {
         // Add local tracks safely
         if (window.localStream !== undefined && window.localStream !== null) {
           window.localStream.getTracks().forEach((track) => {
-            connectionsRef.current[socketListId].addTrack(track, window.localStream);
+            addTrackSafely(
+              connectionsRef.current[socketListId],
+              track,
+              window.localStream,
+            );
           });
         } else {
           let blackSilence = (...args) =>
             new MediaStream([black(...args), silence()]);
           window.localStream = blackSilence();
           window.localStream.getTracks().forEach((track) => {
-            connectionsRef.current[socketListId].addTrack(track, window.localStream);
+            addTrackSafely(
+              connectionsRef.current[socketListId],
+              track,
+              window.localStream,
+            );
           });
         }
       }
     });
 
-    // Only existing users create and send offers to newly joined users
-    // Newly joined users will answer those offers
-    if (id === socketIdRef.current) {
-      // This is the new user joining, existing users should send offers
-      for (let id2 in connectionsRef.current) {
-        if (id2 === socketIdRef.current) continue;
-        try {
-          if (window.localStream !== undefined && window.localStream !== null) {
-            window.localStream.getTracks().forEach((track) => {
-              connectionsRef.current[id2].addTrack(track, window.localStream);
-            });
-          }
-        } catch (e) {
-          console.log(e);
-        }
-        connectionsRef.current[id2]
-          .createOffer()
-          .then((description) => {
-            connectionsRef.current[id2]
-              .setLocalDescription(description)
-              .then(() => {
-                socketRef.current.emit(
-                  "signal",
-                  id2,
-                  JSON.stringify({
-                    sdp: connectionsRef.current[id2].localDescription,
-                  }),
-                );
-              })
-              .catch((e) => console.log(e));
-          })
-          .catch((e) => console.log(e));
+    // ONLY existing users create offers when a new user joins
+    // New users will only answer those offers
+    // Existing users create offer for the newly joined user
+    if (id !== socketIdRef.current) {
+      const pc = connectionsRef.current[id];
+      if (!pc) return;
+
+      if (window.localStream) {
+        window.localStream
+          .getTracks()
+          .forEach((track) => addTrackSafely(pc, track, window.localStream));
       }
+
+      pc.createOffer()
+        .then((offer) => {
+          pc.setLocalDescription(offer);
+          socketRef.current.emit("signal", id, JSON.stringify({ sdp: offer }));
+        })
+        .catch(console.error);
     }
   };
 
@@ -458,38 +498,27 @@ export default function VideoMeetComponent() {
   };
 
   let getDisplayMediaSuccess = (stream) => {
-    try {
-      window.localStream.getTracks().forEach((track) => track.stop());
-    } catch (e) {
-      console.log(e);
+    // Stop old tracks before replacing stream
+    if (window.localStream && window.localStream.getTracks) {
+      try {
+        window.localStream.getTracks().forEach((track) => track.stop());
+      } catch (e) {
+        console.log("Error stopping old stream tracks:", e);
+      }
     }
 
     window.localStream = stream;
 
     localVideoRef.current.srcObject = stream;
 
+    // Add new screen share tracks to existing peer connections
     for (let id in connectionsRef.current) {
       if (id === socketIdRef.current) {
         continue;
       }
       window.localStream.getTracks().forEach((track) => {
-        connectionsRef.current[id].addTrack(track, window.localStream);
+        addTrackSafely(connectionsRef.current[id], track, window.localStream);
       });
-      connectionsRef.current[id]
-        .createOffer()
-        .then((description) => {
-          connectionsRef.current[id]
-            .setLocalDescription(description)
-            .then(() => {
-              socketRef.current.emit(
-                "signal",
-                id,
-                JSON.stringify({ sdp: connectionsRef.current[id].localDescription }),
-              );
-            })
-            .catch((e) => console.log(e));
-        })
-        .catch((e) => console.log(e));
     }
     stream.getTracks().forEach(
       (track) =>
@@ -504,6 +533,16 @@ export default function VideoMeetComponent() {
 
           let blackSilence = (...args) =>
             new MediaStream([black(...args), silence()]);
+
+          // Stop old tracks before assigning blackSilence
+          if (window.localStream && window.localStream.getTracks) {
+            try {
+              window.localStream.getTracks().forEach((track) => track.stop());
+            } catch (e) {
+              console.log(e);
+            }
+          }
+
           window.localStream = blackSilence();
           localVideoRef.current.srcObject = window.localStream;
 
@@ -696,12 +735,6 @@ export default function VideoMeetComponent() {
               </IconButton>
             </Badge>
           </div>
-          <video
-            className={styles.meetUserVideo}
-            ref={localVideoRef}
-            autoPlay
-            muted
-          ></video>
           <div className={styles.conferenceView}>
             {videos.map((video) => {
               return (
