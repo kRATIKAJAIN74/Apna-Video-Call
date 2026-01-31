@@ -12,7 +12,7 @@ import CallEndIcon from "@mui/icons-material/CallEnd";
 import MicIcon from "@mui/icons-material/Mic";
 import ChatIcon from "@mui/icons-material/Chat";
 
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
@@ -29,6 +29,7 @@ const peerConfigConnections = {
 };
 
 export default function VideoMeetComponent() {
+  const { meetingId } = useParams();
   var socketRef = useRef();
   let socketIdRef = useRef();
 
@@ -257,6 +258,7 @@ export default function VideoMeetComponent() {
           }
         };
         
+        // Add local tracks safely
         if (window.localStream !== undefined && window.localStream !== null) {
           window.localStream.getTracks().forEach((track) => {
             connections[fromId].addTrack(track, window.localStream);
@@ -314,105 +316,114 @@ export default function VideoMeetComponent() {
       transports: ["websocket"],
     });
 
+    // Register all event listeners BEFORE connect
+    socketRef.current.on("signal", gotMessageFromServer);
+    socketRef.current.on("chat-message", addMessage);
+    socketRef.current.on("user-left", (id) => {
+      setVideos((videos) => videos.filter((video) => video.socketId != id));
+    });
+    socketRef.current.on("user-joined", handleUserJoined);
+
+    // Only emit join-call after creating socket
     socketRef.current.on("connect", () => {
-      const roomId = window.location.pathname;
-      socketRef.current.emit("join-call", roomId);
-
       socketIdRef.current = socketRef.current.id;
-      socketRef.current.on("signal", gotMessageFromServer);
-      socketRef.current.on("chat-message", addMessage);
+      socketRef.current.emit("join-call", meetingId);
+    });
+  };
 
-      socketRef.current.on("user-left", (id) => {
-        setVideos((videos) => videos.filter((video) => video.socketId != id));
-      });
-
-      socketRef.current.on("user-joined", (id, clients) => {
-        clients.forEach((socketListId) => {
-          connections[socketListId] = new RTCPeerConnection(
-            peerConfigConnections,
-          );
-          connections[socketListId].onicecandidate = (event) => {
-            if (event.candidate != null) {
-              socketRef.current.emit(
-                "signal",
-                socketListId,
-                JSON.stringify({ ice: event.candidate }),
-              );
-            }
-          };
-          connections[socketListId].ontrack = (event) => {
-            let videoExists = videoRef.current.find(
-              (video) => video.socketId === socketListId,
+  let handleUserJoined = (id, clients) => {
+    clients.forEach((socketListId) => {
+      // Check if connection already exists
+      if (!connections[socketListId]) {
+        connections[socketListId] = new RTCPeerConnection(
+          peerConfigConnections,
+        );
+        connections[socketListId].onicecandidate = (event) => {
+          if (event.candidate != null) {
+            socketRef.current.emit(
+              "signal",
+              socketListId,
+              JSON.stringify({ ice: event.candidate }),
             );
-            if (videoExists) {
-              setVideos((videos) => {
-                const updatedVideos = videos.map((video) =>
-                  video.socketId === socketListId
-                    ? { ...video, stream: event.streams[0] }
-                    : video,
-                );
-                videoRef.current = updatedVideos;
-                return updatedVideos;
-              });
-            } else {
-              let newVideo = {
-                socketId: socketListId,
-                stream: event.streams[0],
-                autoPlay: true,
-                playsinline: true,
-              };
-              setVideos((videos) => {
-                const updatedVideos = [...videos, newVideo];
-                videoRef.current = updatedVideos;
-                return updatedVideos;
-              });
-            }
-          };
-
-          if (window.localStream !== undefined && window.localStream !== null) {
-            window.localStream.getTracks().forEach((track) => {
-              connections[socketListId].addTrack(track, window.localStream);
+          }
+        };
+        connections[socketListId].ontrack = (event) => {
+          let videoExists = videoRef.current.find(
+            (video) => video.socketId === socketListId,
+          );
+          if (videoExists) {
+            setVideos((videos) => {
+              const updatedVideos = videos.map((video) =>
+                video.socketId === socketListId
+                  ? { ...video, stream: event.streams[0] }
+                  : video,
+              );
+              videoRef.current = updatedVideos;
+              return updatedVideos;
             });
           } else {
-            // let blackSilence
-            let blackSilence = (...args) =>
-              new MediaStream([black(...args), silence()]);
-            window.localStream = blackSilence();
-            window.localStream.getTracks().forEach((track) => {
-              connections[socketListId].addTrack(track, window.localStream);
+            let newVideo = {
+              socketId: socketListId,
+              stream: event.streams[0],
+              autoPlay: true,
+              playsinline: true,
+            };
+            setVideos((videos) => {
+              const updatedVideos = [...videos, newVideo];
+              videoRef.current = updatedVideos;
+              return updatedVideos;
             });
           }
-        });
+        };
 
-        if (id === socketIdRef.current) {
-          for (let id2 in connections) {
-            if (id2 === socketIdRef.current) continue;
-            try {
-              window.localStream.getTracks().forEach((track) => {
-                connections[id2].addTrack(track, window.localStream);
-              });
-            } catch (e) {}
+        // Add local tracks safely
+        if (window.localStream !== undefined && window.localStream !== null) {
+          window.localStream.getTracks().forEach((track) => {
+            connections[socketListId].addTrack(track, window.localStream);
+          });
+        } else {
+          let blackSilence = (...args) =>
+            new MediaStream([black(...args), silence()]);
+          window.localStream = blackSilence();
+          window.localStream.getTracks().forEach((track) => {
+            connections[socketListId].addTrack(track, window.localStream);
+          });
+        }
+      }
+    });
+
+    // Send offer if this is the new user joining
+    if (id === socketIdRef.current) {
+      for (let id2 in connections) {
+        if (id2 === socketIdRef.current) continue;
+        try {
+          if (window.localStream !== undefined && window.localStream !== null) {
+            window.localStream.getTracks().forEach((track) => {
+              connections[id2].addTrack(track, window.localStream);
+            });
+          }
+        } catch (e) {
+          console.log(e);
+        }
+        connections[id2]
+          .createOffer()
+          .then((description) => {
             connections[id2]
-              .createOffer()
-              .then((description) => {
-                connections[id2]
-                  .setLocalDescription(description)
-                  .then(() => {
-                    socketRef.current.emit(
-                      "signal",
-                      id2,
-                      JSON.stringify({
-                        sdp: connections[id2].localDescription,
-                      }),
-                    );
-                  })
-                  .catch((e) => console.log(e));
+              .setLocalDescription(description)
+              .then(() => {
+                socketRef.current.emit(
+                  "signal",
+                  id2,
+                  JSON.stringify({
+                    sdp: connections[id2].localDescription,
+                  }),
+                );
               })
               .catch((e) => console.log(e));
-          }
-        }
-      });
-    });
+          })
+          .catch((e) => console.log(e));
+      }
+    }
   };
 
   let getMedia = () => {
