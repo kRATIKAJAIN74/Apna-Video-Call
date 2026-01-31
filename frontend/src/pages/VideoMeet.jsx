@@ -259,6 +259,7 @@ export default function VideoMeetComponent() {
   };
 
   let connectToSocketServer = () => {
+    console.log("SOCKET BASE URL =", import.meta.env.VITE_BASE_URL);
     socketRef.current = io(server_url, {
       transports: ["websocket"],
     });
