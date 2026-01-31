@@ -265,7 +265,8 @@ export default function VideoMeetComponent() {
 
     socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("connect", () => {
-      socketRef.current.emit("join-call", meetingCode);
+      const roomId = window.location.pathname;
+      socketRef.current.emit("join-call", roomId);
 
       socketIdRef.current = socketRef.current.id;
       socketRef.current.on("chat-message", addMessage);
