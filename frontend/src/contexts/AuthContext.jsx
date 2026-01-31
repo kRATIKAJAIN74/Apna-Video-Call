@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 export const AuthContext = createContext({});
 const client = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL ,
+  baseURL: process.env.REACT_APP_BASE_URL,
   withCredentials:true,
 });
 
