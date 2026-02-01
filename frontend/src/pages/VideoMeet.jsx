@@ -17,7 +17,9 @@ import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
 // const server_url = "http://localhost:8080"; // for local host
-const server_url = process.env.REACT_APP_SOCKET_URL;
+const server_url =
+  process.env.REACT_APP_SOCKET_URL ||
+  "https://apna-video-call-60j2.onrender.com";
 
 var connections = {};
 const peerConfigConnections = {
@@ -260,10 +262,14 @@ export default function VideoMeetComponent() {
   };
 
   let connectToSocketServer = () => {
-    socketRef.current = io.connect(server_url, { secure: false });
+    socketRef.current = io(server_url, {
+      withCredentials: true,
+      transports: ["polling", "websocket"],
+    });
+
     socketRef.current.on("signal", gotMessageFromServer);
     socketRef.current.on("connect", () => {
-      socketRef.current.emit("join-call", window.location.href);
+      socketRef.current.emit("join-call", window.location.pathname);
 
       socketIdRef.current = socketRef.current.id;
       socketRef.current.on("chat-message", addMessage);
