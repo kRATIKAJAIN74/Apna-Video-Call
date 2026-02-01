@@ -11,7 +11,7 @@ export const connectToSocket = (server) => {
       methods: ["GET", "POST"],
       credentials: true,
     },
-    transports: ["polling", "websocket"], 
+    transports: ["polling", "websocket"],
   });
 
   io.on("connection", (socket) => {
@@ -28,6 +28,23 @@ export const connectToSocket = (server) => {
 
     socket.on("signal", (toId, message) => {
       io.to(toId).emit("signal", socket.id, message);
+    });
+
+    socket.on("chat-message", (data, sender) => {
+      let roomFound = null;
+
+      for (const room in connections) {
+        if (connections[room].includes(socket.id)) {
+          roomFound = room;
+          break;
+        }
+      }
+
+      if (!roomFound) return;
+
+      connections[roomFound].forEach((id) => {
+        io.to(id).emit("chat-message", data, sender, socket.id);
+      });
     });
 
     socket.on("disconnect", () => {

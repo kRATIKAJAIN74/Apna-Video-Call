@@ -17,9 +17,9 @@ import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
 // const server_url = "http://localhost:8080"; // for local host
-const server_url =
-  process.env.REACT_APP_SOCKET_URL ||
-  "https://apna-video-call-60j2.onrender.com";
+ const server_url =
+   process.env.REACT_APP_SOCKET_URL ||
+    "https://apna-video-call-60j2.onrender.com";
 
 var connections = {};
 const peerConfigConnections = {
@@ -476,6 +476,11 @@ export default function VideoMeetComponent() {
   };
 
   let sendMessage = () => {
+    if (!message.trim()) return;
+
+    // optimistic update
+    setMessages((prev) => [...prev, { sender: username, data: message }]);
+
     socketRef.current.emit("chat-message", message, username);
     setMessage("");
   };
