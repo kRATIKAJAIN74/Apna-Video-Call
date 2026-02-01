@@ -28,6 +28,7 @@ const peerConfigConnections = {
 };
 
 export default function VideoMeetComponent() {
+  const remoteVideoRefs = useRef({});
   var socketRef = useRef();
   let socketIdRef = useRef();
 
@@ -41,7 +42,7 @@ export default function VideoMeetComponent() {
 
   let [screen, setScreen] = useState();
 
-  let [showModal, setModal] = useState(true);
+  let [showModal, setModal] = useState(false);
 
   let [screenAvailable, setScreenAvailable] = useState();
   let [messages, setMessages] = useState([]);
@@ -272,6 +273,7 @@ export default function VideoMeetComponent() {
           connections[id].close();
           delete connections[id];
         }
+        delete remoteVideoRefs.current[id];
 
         // 2. Remove video stream from state
         setVideos((prevVideos) =>
@@ -628,15 +630,17 @@ export default function VideoMeetComponent() {
                 return (
                   <div key={video.socketId}>
                     <video
-                      data-socket={video.socketId}
-                      ref={(ref) => {
-                        if (ref && video.stream) {
-                          ref.srcObject = video.stream;
-                        }
+                      key={video.socketId}
+                      ref={(el) => {
+                        if (!el) return;
+                        if (remoteVideoRefs.current[video.socketId]) return;
+
+                        remoteVideoRefs.current[video.socketId] = el;
+                        el.srcObject = video.stream;
                       }}
                       autoPlay
                       playsInline
-                    ></video>
+                    />
                   </div>
                 );
               })}
