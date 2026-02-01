@@ -16,7 +16,8 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
 import lobbyStyles from "../styles/lobby.module.css";
-const server_url = "http://localhost:8080";
+// const server_url = "http://localhost:8080"; // for local host
+const server_url = process.env.REACT_APP_SOCKET_URL;
 
 var connections = {};
 const peerConfigConnections = {
