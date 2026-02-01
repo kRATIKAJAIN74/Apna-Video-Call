@@ -478,9 +478,6 @@ export default function VideoMeetComponent() {
   let sendMessage = () => {
     if (!message.trim()) return;
 
-    // optimistic update
-    setMessages((prev) => [...prev, { sender: username, data: message }]);
-
     socketRef.current.emit("chat-message", message, username);
     setMessage("");
   };
