@@ -640,9 +640,8 @@ export default function VideoMeetComponent() {
                       key={video.socketId}
                       ref={(el) => {
                         if (!el) return;
-                        if (!remoteVideoRefs.current[video.socketId]) {
-                          remoteVideoRefs.current[video.socketId] = el;
-                        }
+                        if (remoteVideoRefs.current[video.socketId]) return;
+                        remoteVideoRefs.current[video.socketId] = el;
                         el.srcObject = video.stream;
                       }}
                       autoPlay
