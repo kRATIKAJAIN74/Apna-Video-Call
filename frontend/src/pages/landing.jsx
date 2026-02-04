@@ -21,7 +21,7 @@ function LandingPage() {
     </div>
     </nav>
 
-    <div class="landingMainContainer">
+    <div className="landingMainContainer">
         <div><h1><span style={{color: "#FF9839"}}>Connect</span> with your loved Ones</h1>
         <p>Cover a distance by Apna Video Call</p>
         <div role='button'> 
@@ -30,7 +30,7 @@ function LandingPage() {
         </div>
         
         <div>
-            <img src="/mobile.png" alt="" />
+            <img src="/mobile.png" alt="Mobile device illustration" />
         </div>
     </div>
         </div>
